@@ -4,7 +4,7 @@ import sys
 import imageio
 #import skimage.transform
 
-from .colmap_wrapper import run_colmap
+from .colmap_wrapper import run_colmap, run_auto_colmap
 from . import colmap_read_model as read_model
 
 
@@ -265,7 +265,8 @@ def gen_poses(basedir, match_type, factors=None):
         files_had = []
     if not all([f in files_had for f in files_needed]):
         print( 'Need to run COLMAP' )
-        run_colmap(basedir, match_type)
+        # run_colmap(basedir, match_type)
+        run_auto_colmap(basedir)
     else:
         print('Don\'t need to run COLMAP')
         

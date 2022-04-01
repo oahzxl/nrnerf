@@ -357,7 +357,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--colmap_matching",
         type=str,
-        default="sequential_matcher",
+        default="exhaustive_matcher",
         help='"sequential_matcher" (default. for temporally ordered input, e.g. video) or "exhaustive_matcher" (each image is matched with every other image).',
     )
     parser.add_argument(

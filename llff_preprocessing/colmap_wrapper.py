@@ -84,7 +84,7 @@ def run_auto_colmap(basedir):
         'colmap', 'automatic_reconstructor',
         '--image_path', os.path.join(basedir, 'images'),
         '--workspace_path', basedir,
-        '--single_camera', '1'
+        '--single_camera', '1',
         '--dense', '0'
     ]
     feat_output = (subprocess.check_output(auto_colmap_args, universal_newlines=True))

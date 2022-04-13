@@ -477,6 +477,7 @@ def render_path(
             **render_kwargs,
         )
         rgb = rgb.view(height, width, -1)
+        disp = torch.nan_to_num_(disp, 1)
         disp = disp.view(height, width)
         acc = acc.view(height, width)
         for key in details_and_rest.keys():

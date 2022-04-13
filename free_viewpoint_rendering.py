@@ -1,8 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+import os
+# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 import numpy as np
 import math
 import shutil
-import os
 import pathlib
 import re
 import sys
@@ -789,99 +790,99 @@ def free_viewpoint_rendering(args):
         imageio.imwrite(os.path.join(output_folder, "standard_deviations.png"), averaged_standard_devations)
 
     # quantitative evaluation
-    if args.camera_path == "input_reconstruction":
-        try:
-            from PerceptualSimilarity import lpips
-            perceptual_metric = lpips.LPIPS(net='alex')
-        except:
-            print("Perceptual LPIPS metric not found. Please see the README for installation instructions")
-            perceptual_metric = None
-
-        create_error_maps = True  # whether to write out error images instead of just computing scores
-
-        naive_error_folder = os.path.join(output_folder, "naive_errors/")
-        create_folder(naive_error_folder)
-        ssim_error_folder = os.path.join(output_folder, "ssim_errors/")
-        create_folder(ssim_error_folder)
-
-        to8b = lambda x: (255 * np.clip(x, 0, 1)).astype(np.uint8)
-
-        def visualize_with_jet_color_scheme(image):
-            from matplotlib import cm
-            color_mapping = np.array([cm.jet(i)[:3] for i in range(256)])
-            max_value = 1.0
-            min_value = 0.0
-            intermediate = np.clip(image, a_max=max_value,
-                                   a_min=min_value) / max_value  # cut off above max_value. result is normalized to [0,1]
-            intermediate = (255. * intermediate).astype('uint8')  # now contains int in [0,255]
-            original_shape = intermediate.shape
-            intermediate = color_mapping[intermediate.flatten()]
-            intermediate = intermediate.reshape(original_shape + (3,))
-            return intermediate
-
-        mask = None
-        scores = {}
-        from skimage.metrics import structural_similarity as ssim
-        for i, (groundtruth, generated) in enumerate(zip(images, rgbs)):
-
-            if mask is None:  # undistortion leads to masked-out black pixels in groundtruth
-                mask = (np.sum(groundtruth, axis=-1) == 0.)
-            groundtruth[mask] = 0.
-            generated[mask] = 0.
-
-            # PSNR
-            mse = np.mean((groundtruth - generated) ** 2)
-            psnr = -10. * np.log10(mse)
-
-            # SSIM
-            # https://scikit-image.org/docs/dev/api/skimage.metrics.html#skimage.metrics.structural_similarity
-            returned = ssim(groundtruth, generated, data_range=1.0, multichannel=True, gaussian_weights=True, sigma=1.5,
-                            use_sample_covariance=False, full=create_error_maps)
-            if create_error_maps:
-                ssim_error, ssim_error_image = returned
-            else:
-                ssim_error = returned
-
-            # perceptual metric 
-            if perceptual_metric is None:
-                lpips = 1.
-            else:
-                def numpy_to_pytorch(np_image):
-                    torch_image = 2 * torch.from_numpy(np_image) - 1  # height x width x 3. must be in [-1,+1]
-                    torch_image = torch_image.permute(2, 0, 1)  # 3 x height x width
-                    return torch_image.unsqueeze(0)  # 1 x 3 x height x width
-
-                lpips = perceptual_metric.forward(numpy_to_pytorch(groundtruth), numpy_to_pytorch(generated))
-                lpips = float(lpips.detach().reshape(1).numpy()[0])
-
-            scores[i] = {"psnr": psnr, "ssim": ssim_error, "lpips": lpips}
-
-            if create_error_maps:
-                # MSE-style
-                error = np.linalg.norm(groundtruth - generated, axis=-1) / np.sqrt(1 + 1 + 1)  # height x width
-                error *= 10.  # exaggarate error
-                error = np.clip(error, 0.0, 1.0)
-                error = to8b(visualize_with_jet_color_scheme(error))  # height x width x 3. int values in [0,255]
-                filename = os.path.join(naive_error_folder, 'error_{:03d}.png'.format(i))
-                imageio.imwrite(filename, error)
-
-                # SSIM
-                filename = os.path.join(ssim_error_folder, 'error_{:03d}.png'.format(i))
-                ssim_error_image = to8b(visualize_with_jet_color_scheme(1. - np.mean(ssim_error_image, axis=-1)))
-                imageio.imwrite(filename, ssim_error_image)
-
-        averaged_scores = {}
-        averaged_scores["average_psnr"] = np.mean([score["psnr"] for score in scores.values()])
-        averaged_scores["average_ssim"] = np.mean([score["ssim"] for score in scores.values()])
-        averaged_scores["average_lpips"] = np.mean([score["lpips"] for score in scores.values()])
-
-        print(averaged_scores, flush=True)
-
-        scores.update(averaged_scores)
-
-        import json
-        with open(os.path.join(output_folder, "scores.json"), "w") as json_file:
-            json.dump(str(scores), json_file, indent=4)
+    # if args.camera_path == "input_reconstruction":
+    #     try:
+    #         from PerceptualSimilarity import lpips
+    #         perceptual_metric = lpips.LPIPS(net='alex')
+    #     except:
+    #         print("Perceptual LPIPS metric not found. Please see the README for installation instructions")
+    #         perceptual_metric = None
+    #
+    #     create_error_maps = True  # whether to write out error images instead of just computing scores
+    #
+    #     naive_error_folder = os.path.join(output_folder, "naive_errors/")
+    #     create_folder(naive_error_folder)
+    #     ssim_error_folder = os.path.join(output_folder, "ssim_errors/")
+    #     create_folder(ssim_error_folder)
+    #
+    #     to8b = lambda x: (255 * np.clip(x, 0, 1)).astype(np.uint8)
+    #
+    #     def visualize_with_jet_color_scheme(image):
+    #         from matplotlib import cm
+    #         color_mapping = np.array([cm.jet(i)[:3] for i in range(256)])
+    #         max_value = 1.0
+    #         min_value = 0.0
+    #         intermediate = np.clip(image, a_max=max_value,
+    #                                a_min=min_value) / max_value  # cut off above max_value. result is normalized to [0,1]
+    #         intermediate = (255. * intermediate).astype('uint8')  # now contains int in [0,255]
+    #         original_shape = intermediate.shape
+    #         intermediate = color_mapping[intermediate.flatten()]
+    #         intermediate = intermediate.reshape(original_shape + (3,))
+    #         return intermediate
+    #
+    #     mask = None
+    #     scores = {}
+    #     from skimage.metrics import structural_similarity as ssim
+    #     for i, (groundtruth, generated) in enumerate(zip(images, rgbs)):
+    #
+    #         if mask is None:  # undistortion leads to masked-out black pixels in groundtruth
+    #             mask = (np.sum(groundtruth, axis=-1) == 0.)
+    #         groundtruth[mask] = 0.
+    #         generated[mask] = 0.
+    #
+    #         # PSNR
+    #         mse = np.mean((groundtruth - generated) ** 2)
+    #         psnr = -10. * np.log10(mse)
+    #
+    #         # SSIM
+    #         # https://scikit-image.org/docs/dev/api/skimage.metrics.html#skimage.metrics.structural_similarity
+    #         returned = ssim(groundtruth, generated, data_range=1.0, multichannel=True, gaussian_weights=True, sigma=1.5,
+    #                         use_sample_covariance=False, full=create_error_maps)
+    #         if create_error_maps:
+    #             ssim_error, ssim_error_image = returned
+    #         else:
+    #             ssim_error = returned
+    #
+    #         # perceptual metric
+    #         if perceptual_metric is None:
+    #             lpips = 1.
+    #         else:
+    #             def numpy_to_pytorch(np_image):
+    #                 torch_image = 2 * torch.from_numpy(np_image) - 1  # height x width x 3. must be in [-1,+1]
+    #                 torch_image = torch_image.permute(2, 0, 1)  # 3 x height x width
+    #                 return torch_image.unsqueeze(0)  # 1 x 3 x height x width
+    #
+    #             lpips = perceptual_metric.forward(numpy_to_pytorch(groundtruth), numpy_to_pytorch(generated))
+    #             lpips = float(lpips.detach().reshape(1).numpy()[0])
+    #
+    #         scores[i] = {"psnr": psnr, "ssim": ssim_error, "lpips": lpips}
+    #
+    #         if create_error_maps:
+    #             # MSE-style
+    #             error = np.linalg.norm(groundtruth - generated, axis=-1) / np.sqrt(1 + 1 + 1)  # height x width
+    #             error *= 10.  # exaggarate error
+    #             error = np.clip(error, 0.0, 1.0)
+    #             error = to8b(visualize_with_jet_color_scheme(error))  # height x width x 3. int values in [0,255]
+    #             filename = os.path.join(naive_error_folder, 'error_{:03d}.png'.format(i))
+    #             imageio.imwrite(filename, error)
+    #
+    #             # SSIM
+    #             filename = os.path.join(ssim_error_folder, 'error_{:03d}.png'.format(i))
+    #             ssim_error_image = to8b(visualize_with_jet_color_scheme(1. - np.mean(ssim_error_image, axis=-1)))
+    #             imageio.imwrite(filename, ssim_error_image)
+    #
+    #     averaged_scores = {}
+    #     averaged_scores["average_psnr"] = np.mean([score["psnr"] for score in scores.values()])
+    #     averaged_scores["average_ssim"] = np.mean([score["ssim"] for score in scores.values()])
+    #     averaged_scores["average_lpips"] = np.mean([score["lpips"] for score in scores.values()])
+    #
+    #     print(averaged_scores, flush=True)
+    #
+    #     scores.update(averaged_scores)
+    #
+    #     import json
+    #     with open(os.path.join(output_folder, "scores.json"), "w") as json_file:
+    #         json.dump(str(scores), json_file, indent=4)
 
 
 if __name__ == "__main__":
@@ -891,7 +892,7 @@ if __name__ == "__main__":
     # mandatory arguments
     parser.add_argument(
         "--input",
-        default='logs/yellow_half_f4',
+        default='logs/0325_1_black_f4r2',
         type=str,
         help="the experiment folder that was created by train.py when training the network.",
     )
